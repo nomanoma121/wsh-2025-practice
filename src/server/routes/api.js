@@ -97,6 +97,7 @@ export const apiRoute = async (fastify) => {
       throw fastify.httpErrors.notFound();
     }
 
+    console.log(race)
     res.send(race);
   });
 
