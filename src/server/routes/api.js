@@ -5,6 +5,7 @@ import { assets } from "../../client/foundation/utils/UrlUtils.js";
 import { BettingTicket, Race, User } from "../../model/index.js";
 import { createConnection } from "../typeorm/connection.js";
 import { initialize } from "../typeorm/initialize.js";
+import { zenginCode } from "zengin-code";
 
 /**
  * @type {import('fastify').FastifyPluginCallback}
@@ -163,6 +164,30 @@ export const apiRoute = async (fastify) => {
     await userRepo.save(req.user);
 
     res.send(bettingTicket);
+  });
+
+  fastify.get("/zengin-code ", async (_req, res) => {
+    const bankCode = req.query.bankCode;
+    const branchCode = req.query.branchCode;
+
+    if (bankCode) {
+      const bank = zenginCode[bankCode];
+      if (!bank) {
+        return res.status(404).send({ error: "Bank not found" });
+      }
+      
+      if (branchCode) {
+        const branch = bank.branches[branchCode];
+        if (!branch) {
+          return res.status(404).send({ error: "Branch not found" });
+        }
+        return res.send({ bank, branch });
+      }
+      // 指定されていない場合は銀行の情報のみを返す
+      return res.send({ bank });
+    }
+
+    return res.send(zenginCode);
   });
 
   fastify.post("/initialize", async (_req, res) => {

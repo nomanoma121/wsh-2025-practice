@@ -1,6 +1,5 @@
 import { motion } from "framer-motion";
-import React, { forwardRef, useCallback, useState } from "react";
-import zenginCode from "zengin-code";
+import React, { forwardRef, useCallback, useEffect, useState } from "react";
 
 import { Dialog } from "../../../../components/layouts/Dialog";
 import { Spacer } from "../../../../components/layouts/Spacer";
@@ -8,6 +7,7 @@ import { Stack } from "../../../../components/layouts/Stack";
 import { Heading } from "../../../../components/typographies/Heading";
 import { useMutation } from "../../../../hooks/useMutation";
 import { Space } from "../../../../styles/variables";
+import { set } from "lodash";
 
 const CANCEL = "cancel";
 const CHARGE = "charge";
@@ -24,6 +24,9 @@ export const ChargeDialog = forwardRef(({ onComplete }, ref) => {
   const [accountNo, setAccountNo] = useState("");
   const [amount, setAmount] = useState(0);
 
+  const [bankList, setBankList] = useState([]);
+  const [branchList, setBranchList] = useState([]);
+
   const clearForm = useCallback(() => {
     setBankCode("");
     setBranchCode("");
@@ -35,6 +38,34 @@ export const ChargeDialog = forwardRef(({ onComplete }, ref) => {
     auth: true,
     method: "POST",
   });
+
+  const fetchBankList = useCallback(async () => {
+    const response = await fetch("/zengin-code");
+    const data = await response.json();
+    const bankList = Object.entries(data).map(([code, { name }]) => ({
+      code,
+      name,
+    }));
+    setBankList(bankList);
+  }, []);
+
+  const fetchBranchList = useCallback(async () => {
+    const response = await fetch(`/zengin-code?bankCode=${bankCode}`);
+    const data = await response.json();
+    const branchList = Object.values(data.branches).map((branch) => ({
+      code: branch.code,
+      name: branch.name,
+    }));
+    setBranchList(branchList);
+  }, [bankCode]);
+
+  useEffect(() => {
+    fetchBankList();
+  }, [fetchBankList]);
+
+  useEffect(() => {
+    fetchBranchList();
+  }, [bankCode, fetchBranchList]);
 
   const handleCodeChange = useCallback((e) => {
     setBankCode(e.currentTarget.value);
@@ -67,12 +98,8 @@ export const ChargeDialog = forwardRef(({ onComplete }, ref) => {
     [charge, bankCode, branchCode, accountNo, amount, onComplete, clearForm],
   );
 
-  const bankList = Object.entries(zenginCode).map(([code, { name }]) => ({
-    code,
-    name,
-  }));
-  const bank = zenginCode[bankCode];
-  const branch = bank?.branches[branchCode];
+  const bank = bankList.find((bank) => bank.code === bankCode);
+  const branch = branchList.find((branch) => branch.code === branchCode);
 
   return (
     <Dialog ref={ref} onClose={handleCloseDialog}>
